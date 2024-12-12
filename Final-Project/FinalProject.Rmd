@@ -1,0 +1,194 @@
+---
+title: '**"Statistical Approaches for Assessing Disparate Impact
+  in Fair Housing Cases" Analysis of Methods and Normative Considerations**'
+author: "Mackie Jackson"
+date: "12 December, 2024"
+geometry: margin=1in
+fontsize: 12pt
+output:
+  pdf_document:
+    toc: no
+  html_document:
+    theme: cosmo
+    toc: no
+    toc_float: no
+    
+---
+
+```{r, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+```
+
+## Introduction
+
+|       The Fair Housing Act (FHA) of 1968 prohibits discrimination against individuals renting, buying, applying for a mortgage, or seeking housing assistance. Protected classes defined by the legislation include race, color, national origin, religion, sex, familial status, and disability. In order to pursue legal action under the FHA, plaintiffs must prove that a defendant’s ongoing policy causes significant disparate impact. Following the *Inclusive Communities* Supreme Court case in 2015, a set of four guidelines were established to determine whether a policy meets the standard for disparate impact. The plaintiff’s evidence must focus on the protected class group affected by the alleged discriminatory policy, prove via comparison that other groups were “less harmed” by the policy, and demonstrate both relative and sufficiently large impact. There is legal precedent for the use of a 4/5ths difference in effects on a protected class versus a non-protected class without the use of further statistical evidence like a confidence interval, but this allows a defendant to argue that the observed proportions are a product of chance. 
+
+|       This fall, Hurricane Helene decimated neighborhoods across Western North Carolina. As individuals from marginalized groups are presently displaced from their homes due to damages and seek to rebuild or find housing elsewhere, we might consider a housing discrimination case that happened in the wake of Hurricane Katrina. In the 2010 civil suit *Greater New Orleans Fair Housing Action Center v. United States Department of Housing & Urban Development*, plaintiffs alleged that HUD gave homeowners in predominantly Black neighborhoods less money to rebuild than individuals in predominantly white neighborhoods. They successfully settled the suit in 2011 and were compensated by the state for withheld funding, but ultimately failed to convince judges of disparate impact. 
+
+|       In their article “Statistical Approaches for Assessing Disparate Impact in Fair Housing Cases”, authors Aigner, del Ángel, and Wiles evaluate three approaches to statistical inference for disparate impact. Here, I examine their evaluative methodologies and test it on unweighted income data, as well as assess positive normative considerations behind developing defensible statistical inference techniques to bolster evidence in housing discrimination cases. I ultimately argue that when an individual's right to fair and equal housing has allegedly been violated, both Rawlsian thinkers and Kantian Deontologists would claim that legal practitioners have an ethical obligation to use these improved statistical approaches for assessing disparate impact in order to best pursue justice. 
+
+## Analysis of Methods
+
+|       A disparity ratio, the legally precedented method of statistically proving disparate impact, compares the effects of a given policy on a protected class ($P_1$) to a non-protected class ($P_2$). It is given by the simple equation $R = P_1 / P_2$. When addressing housing discrimination, a measure called the adverse impact ratio is often utilized. This is the proportion of the percentage of harmful outcomes, or rejections, for the protected class, $Q_1$, compared to the non-protected class, $Q_2$. Any value of $Q_i$ is given by $1 - P_i$. Therefore, the adverse impact ratio is given by $R^* = Q_1/Q_2$ and deemed sufficient for proving discriminatory intent if $R^*$ is greater than 1.25. 
+
+|       In order to examine the proposed methods of statistically inferencing disparate impact in a novel manner, I recreate the part of the study that Aigner et al. reference in their example of disparate impact in fair housing cases. Schwemm and Bradford analyze weighted and unweighted income data by race to determine whether a screening policy for renters that excludes Section 8 vouchers is discriminatory, in which they calculate disparity ratios and statistical significance for income up to 50,000 dollars in five intervals (2016). They determine the target income range by finding the “very low income” threshold for a four-person household in the District of Columbia in 2013, which was approximately 53,500 dollars. American Community Survey (ACS) income sample data for white and Black households are used to calculate the disparity ratio and 95 percent one-sided confidence interval lower bounds of the difference, direct ratio, and log-ratio approaches to inference. 
+
+|       The mathematical formulas associated with computing the unweighted lower bounds of the three methods' confidence intervals (where significance level $\alpha$ = 0.05) are as follows:
+
+
+|           **Difference:** $(P_1 - P_2) \ge ((p_1 - p_2) - Z_\alpha (p) (1 - p)(\frac{1}{n_1} + \frac{1}{n_2})^\frac{1}{2})$
+
+|               where $p$ is given by $\frac{(p_1 n_1 + p_2 n_2)}{(n_1 + n_2)}$
+
+|           **Direct ratio:** $r > R0 + Z_\alpha[v(r)]^\frac{1}{2}$ 
+
+
+|               where $v(r)$ is variance of $r$ and given by $(\frac{p_1}{p_2^2})(\frac{q_1}{n_1} + \frac{p_1q_2}{n_2p_2})$
+
+|           **Log-ratio:** $r > antilog(ln(R0) + Z_\alpha[v(ln(r)]^\frac{1}{2})$ 
+
+|               where $v(ln(r))$ is given by $\frac{q_1}{p_1n_1} + \frac{q_2}{p_2n_2}$
+
+$\\$
+
+|       Aigner and his colleagues claim to expect consistent results across all three methods by using a large sample size ($n$ greater than 1000 for protected and unprotected classes.) Looking at their results, there are positive lower bounds for the difference approach, showing that $P1 > P2$, while both ratio methods suggest that $R > 1$. Put simply, all methods of statistical inference suggest that there a disparity exists between income distributions among the protected and unprotected classes. Aigner et al. also conclude that the preferred method for proving disparate impact remains the direct difference test due to its amount of legal precedent and its normal distribution adherence. However, there are some cases in which a ratio of disparity will be of greater or equal interest than an absolute difference. Such an instance would be if the disparity ratio is large but the results of the difference test are small. 
+
+```{r, echo=FALSE, warning=FALSE}
+# read csv file for 2023 durham income % brackets by white and Black racial groups
+DurhamIncome2023 <- read.csv('durham-income.csv') |> 
+  rename(`Less than $10,000` = Household.Income.pct..10000,
+         `$10,000 to $19,999` = Household.Income.pct..10000.to.19999, 
+         `$20,000 to $29,999` = Household.Income.pct.20000.to.29999, 
+         `$30,000 to $39,999` = Household.Income.pct.30000.to.39999,
+         `$40,000 to $49,999` = Household.Income.pct.40000.to.49999) |>
+  pivot_longer(cols = c(`Less than $10,000`, # pivot until it is organized right 
+                        `$10,000 to $19,999`,
+                        `$20,000 to $29,999`, 
+                        `$30,000 to $39,999`, 
+                        `$40,000 to $49,999`),
+                    names_to = 'Income Range',
+                    values_to = 'Pct of Household Income (2023)') |> 
+  pivot_wider(names_from = Race, values_from = `Pct of Household Income (2023)`) |>
+                rename(`Percentage of Black households (p1*100)` = black, 
+                       `Percentage of white households (p2*100)` = white) |>
+  select(-`Percentage of white households (p2*100)`, `Percentage of white households (p2*100)`) #reorder
+```
+
+```{r, echo=FALSE}
+# make disparity ratio column
+DurhamIncome2023$`Disparity ratio (p1/p2)` <- DurhamIncome2023$`Percentage of Black households (p1*100)` / 
+  DurhamIncome2023$`Percentage of white households (p2*100)`
+
+# Add household count (sample size) variable for conf int calculations
+samplesizes <- read.csv('household-numbers.csv') 
+
+whitesamplesizes <- samplesizes[, 3:7] |> 
+  pivot_longer(cols = everything(), names_to = 'Income Range', values_to = 'Count') |>
+  select(Count) |>
+  c()
+  
+blacksamplesizes <- samplesizes[, 9:13] |> 
+  pivot_longer(cols = everything(), names_to = 'Income Range', values_to = 'Count') |>
+  select(Count) |>
+  c()
+
+DurhamIncome2023$`Black sample size (n1)` <- blacksamplesizes$Count
+DurhamIncome2023$`White sample size (n2)` <- whitesamplesizes$Count
+
+```
+
+```{r, echo=FALSE}
+# make lower conf int measurement columns
+# define variables as shown in appendix
+p <- (((DurhamIncome2023$`Percentage of Black households (p1*100)`/100)*(DurhamIncome2023$`Black sample size (n1)`)) +
+        (((DurhamIncome2023$`Percentage of white households (p2*100)`/100)*(DurhamIncome2023$`White sample size (n2)`)))) /
+        (DurhamIncome2023$`Black sample size (n1)` + DurhamIncome2023$`White sample size (n2)`)
+p1 <- DurhamIncome2023$`Percentage of Black households (p1*100)`/100
+p2 <- DurhamIncome2023$`Percentage of white households (p2*100)`/100
+n1 <- DurhamIncome2023$`Black sample size (n1)`
+n2 <- DurhamIncome2023$`White sample size (n2)`
+
+#difference
+DurhamIncome2023$`Difference approach (P1 - P2)` <- (p1 - p2) - abs(qt(p=.05, df=4874, lower.tail=TRUE))*((p)*(1-p)*(1/n1 + 1/n2))^0.5
+
+# define variables
+q1 <- (1 - p1)
+q2 <- (1 - p2)
+variancer <- (p1 / (p2^2))*((q1/n1) + ((p1*q2)/(n2*p2)))
+R0 <- 1.25
+
+# ratio
+DurhamIncome2023$`Direct ratio approach` <- R0 + abs(qt(p=.05, df=4874, lower.tail=TRUE))*(variancer)^0.5
+
+#define variables
+variancelnr <- (q1/(p1*n1)) + (q2/(p2*n2))
+# log ratio
+DurhamIncome2023$`Log-ratio approach` <- exp(log(R0) + abs(qt(p=.05, df=4874, lower.tail=TRUE))*(variancelnr)^0.5)
+
+DurhamIncomeTable <- DurhamIncome2023 |>
+  select(-c(`Black sample size (n1)`, `White sample size (n2)`)) |>
+  rename(`Percentage of white households` = `Percentage of white households (p2*100)`,
+         `Percentage of Black households` = `Percentage of Black households (p1*100)`,
+         `Disparity ratio (P1/P2)` = `Disparity ratio (p1/p2)`)
+
+```
+
+```{r, echo=FALSE}
+# tableeeee
+kable(DurhamIncomeTable, booktabs = TRUE, align = 'l') |>
+   kable_styling(latex_options = 'HOLD_position') |>
+   column_spec(1:7, width = "2cm") |>
+   add_header_above(c(' ' = 4, 'Lower bounds' = 3)) |>
+   add_header_above(c('Durham, NC Income Ranges for Black and white households, 2023,
+                      with 95% one-sided confidence interval lower bounds.' = 7), bold = TRUE) |>
+   kable_styling(latex_options = 'striped',
+                 font_size = 11)
+
+```
+
+|        I acquired unweighted 2023 ACS data within the geography of Durham, North Carolina from the vendor SimplyAnalytics to create the above table (U.S. Census Bureau 2023). My reasons for using unweighted data are twofold: Aigner and his colleagues note more inconsistencies among the three methods when data is weighted, and weighted income data was not readily accessible. The Durham-Chapel Hill Metropolitan Area has a present "very low income" threshold of 50,550 dollars for a four-person household, similar to that of D.C.'s a decade earlier (Program Parameters and Research Division 2023). 
+
+|       My results do not confirm Aigner et al.’s conclusion that disparity ratio confidence intervals based on the log-ratio transformation are narrower than the direct ratio approach, although this is likely due to methodological error on my part rather than theirs. Like the D.C. results though, the difference and direct ratio methods in my table present the same conclusion that there is significant disparity in classes. Considering the large sample size I used in my computations, Aigner et al. might suggest use of the direct ratio estimator in any case because the more conservative approach to inference is legally preferred. 
+
+## Analysis of Normative Considerations
+
+|       A deontological thinker would wholeheartedly support Aigner et al.'s methods and work. We have previously considered that a Kantian deontologist might argue that failure to properly interpret statistical results to an audience violates both formulations of the categorical imperative. In thinking about statistical ethics as obligation, I argue that failure to provide statistical evidence in defense of a marginalized individual or group to the fullest of one's ability also violates the categorical imperative. One cannot universalize failing to support an honest plaintiff's claims of disparate impact with robust statistical inference techniques. Furthermore, if a legal professional doesn't exhaust every effort to prove that their client, whom they are profiting from regardless of outcome, is a victim of illegal discrimination, they fail to treat a moral agent as an end. Thus by logical extension, statisticians who research this topic are ethically obligated to present their findings on best practices for assessing disparate impact.   
+
+|       I support the assertion that failing to present and utilize the best methods for assessing disparate impact violates the categorical imperative using a Rawlsian lens. In political philosopher John Rawls’ 1985 essay "Justice as Fairness: Political not Metaphysical", he describes a conception of justice based on both liberty and equality; one which asks individuals to blindly choose the structure of the society they live in, not knowing whether they will be on top or bottom of the hierarchy. He writes of liberty as all individuals having certain equal, inviolable rights, and one such right is arguably access to housing. Rawls argues for equality of opportunities; access to homeownership, tenancy, and public resources after a natural disaster might be considered among these. 
+
+|       With this in mind, we might conceive of Aigner et al.'s provision of assessed and improved statistical methods for assessing disparate impact as an endeavor towards a Rawlsian idea of justice. Discriminatory housing practices are a widespread systemic problem, and working to remedy them is a moral duty. As recently as 2016, the probability of a Black individual receiving a response from an initial housing inquiry is eight percent lower than that of a similarly qualified white individual. Black borrowers also pay approximately 5-11 percent more on monthly home loans than white borrowers (Lincoln, Lee, & Brandon 2020). If we refer to the recent income disparity data from Durham, it is evident that there are a higher proportion of low income Black residents than white residents, thus any discriminatory policies against housing vouchers likely have a disparate impact on Black applicants. 
+
+## Conclusion
+
+|       Aigner and his colleagues determine that the best approach to statistical assessment in most cases is to estimate $R$ and place a confidence interval around it. They emphasize legal precedent, stating that the common approach is to use the difference test in order to establish statistical significance, and then to use the disparity ratio as proof of practical significance. I have examined and tested their evaluative methods, as well as discussed normative considerations behind developing high-quality statistical inference techniques. The aforementioned evidence of present racial disparities in housing trends establishes the tangible importance of the results of Aigner et al.'s research. I conclude that when a protected individual or group's right to fair and equal housing has allegedly been violated, both Rawlsian thinkers and Kantian Deontologists would support the assertion that statistical and legal practitioners have an ethical duty to present and use these improved statistical approaches for assessing disparate impact. 
+
+
+
+$\\$
+$\\$
+$\\$
+$\\$
+$\\$
+
+## References & Data Sources
+
+Aigner, Dennis J., Marco del Ángel, and Joel Wiles. 2024. “Statistical Approaches for Assessing Disparate Impact in Fair Housing Cases.” Statistics and Public Policy 11 (1): 2263038. https://doi.org/10.1080/2330443X.2023.2263038.
+
+Greater New Orleans Fair Housing Action Center v. United States Department of Housing & Urban Development. 2010. United States District Court, D. Columbia.
+
+Lincoln, Quillian, John J. Lee, and Honoré Brandon. 2020. “Racial Discrimination in the U.S. Housing and Mortgage Lending Markets: A Quantitative Review of Trends, 1976–2016.” Race and Social Problems 12 (1): 13–28. https://doi.org/10.1007/s12552-019-09276-x.
+
+Program Parameters and Research Division, U.S. Department of Housing and Urban Development. 2023. FY 2023 Income Limits Summary. Retrieved from https://www.huduser.gov/portal/datasets/il/il2023/2023summary.odn?inputname=METRO20500M20500*Durham-Chapel+Hill%2C+NC+HUD+Metro+FMR+Area&wherefrom=%24wherefrom%24&selection_type=hmfa&year=2023 
+
+Rawls, John. 1985. “Justice as Fairness: Political Not Metaphysical.” Philosophy & Public Affairs 14 (3): 223–51.
+
+Schwemm, Robert G., and Calvin Bradford. 2016. “Proving Disparate Impact in Fair Housing Cases after Inclusive Communities.” NYU Journal of Legislation and Public Policy 19 (1): 685–770.
+
+U.S. Census Bureau, U.S. Department of Commerce. 2023. Household Income in the Past 12 Months (in 2023 Inflation-Adjusted Dollars) (Black or African American Alone Householder). American Community Survey, ACS 1-Year Estimates Detailed Tables, Table B19001B. Retrieved from https://data.census.gov/table/ACSDT1Y2023.B19001B?q=B19001B
+
+U.S. Census Bureau, U.S. Department of Commerce. 2023. Household Income in the Past 12 Months (in 2023 Inflation-Adjusted Dollars) (White Alone Householder). American Community Survey, ACS 1-Year Estimates Detailed Tables, Table B19001A. Retrieved from https://data.census.gov/table/ACSDT1Y2023.B19001A?q=B19001A
+
+
